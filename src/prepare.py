@@ -6,7 +6,7 @@ import pandas as pd
 import yaml
 from sklearn.model_selection import train_test_split
 
-OUT_DIR = Path("data/splits")
+OUT_DIR = Path("splits")
 IMAGE_EXTS = {".jpg", ".jpeg", ".png"}
 
 
