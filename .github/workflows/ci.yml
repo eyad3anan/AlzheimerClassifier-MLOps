@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - name: Lint
+        run: uv run ruff check .
+      - name: Unit tests
+        run: uv run pytest -q
+
+  pipeline-smoke:
+    # Runs the full dvc pipeline (prepare -> train -> evaluate -> MLflow) on the 20 sample images.
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - name: dvc repro (smoke params)
+        run: |
+          git config user.name ci && git config user.email ci@example.com  # dvc exp needs an identity
+          uv run dvc exp run \
+            -S data.raw_dir=Data/SampleTestDataset -S data.test_size=0.2 -S data.val_size=0.25 \
+            -S train.epochs=1 -S train.batch_size=4
+          uv run dvc metrics show
+      - name: Log to local MLflow
+        run: uv run python -m src.log_mlflow
