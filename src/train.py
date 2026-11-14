@@ -21,7 +21,8 @@ _augment = tf.keras.Sequential([
 
 def _load(path):
     img = tf.io.decode_image(tf.io.read_file(path), channels=3, expand_animations=False)
-    return tf.image.resize(img, IMG_SIZE, method="nearest")
+    # nearest keeps uint8; preprocess_input would then wrap around, so cast explicitly
+    return tf.cast(tf.image.resize(img, IMG_SIZE, method="nearest"), tf.float32)
 
 
 def make_dataset(df, batch_size, training):
