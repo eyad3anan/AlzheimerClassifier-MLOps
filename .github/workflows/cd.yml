@@ -24,6 +24,7 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
     environment: production
     env:
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
@@ -40,10 +41,12 @@ jobs:
         run: uv run --no-project --with pyyaml python -m src.gate
 
       - name: Pull model from DVC (DagsHub)
+        env:
+          DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
         run: |
           uvx --from "dvc>=3.50" dvc remote modify --local origin auth basic
           uvx --from "dvc>=3.50" dvc remote modify --local origin user "$DAGSHUB_USER"
-          uvx --from "dvc>=3.50" dvc remote modify --local origin password "${{ secrets.DAGSHUB_TOKEN }}"
+          uvx --from "dvc>=3.50" dvc remote modify --local origin password "$DAGSHUB_TOKEN"
           uvx --from "dvc>=3.50" dvc pull models/model.weights.h5
 
       - name: Upload model to HF model repo

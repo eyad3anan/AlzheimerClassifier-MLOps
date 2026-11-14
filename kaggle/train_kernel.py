@@ -7,6 +7,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import tensorflow as tf  # preinstalled on Kaggle
+
 REPO, SHA = "__REPO__", "__SHA__"
 WORK, OUT = Path("/tmp/repo"), Path("/kaggle/working")
 
@@ -19,6 +21,7 @@ def run(cmd, cwd=None):
 run(["git", "clone", "--quiet", REPO, str(WORK)])
 run(["git", "checkout", "--quiet", SHA], cwd=WORK)
 run(["pip", "install", "--quiet", "dvc>=3.50"])
+print("TensorFlow", tf.__version__, "GPUs:", tf.config.list_physical_devices("GPU"), flush=True)
 run(["dvc", "repro"], cwd=WORK)  # params.yaml raw_dir already points at /kaggle/input
 
 for rel in ("dvc.lock", "metrics.json", "models", "reports", "splits"):
@@ -27,4 +30,5 @@ for rel in ("dvc.lock", "metrics.json", "models", "reports", "splits"):
         shutil.copytree(src, dst, dirs_exist_ok=True)
     else:
         shutil.copy2(src, dst)
+(OUT / "sha.txt").write_text(SHA)  # lets the workflow reject outputs from an older version
 print((WORK / "metrics.json").read_text())
