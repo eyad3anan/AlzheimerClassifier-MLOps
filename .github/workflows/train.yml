@@ -1,0 +1,93 @@
+name: Train (Kaggle GPU)
+
+# Continuous training: run `dvc repro` on a Kaggle GPU kernel, then version the results
+# (DVC -> DagsHub), log them (MLflow -> DagsHub) and hand over to CD.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [params.yaml, dvc.yaml, src/prepare.py, src/train.py, src/model.py, src/evaluate.py]
+
+concurrency:
+  group: train
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  KERNEL_SLUG: alzheimer-mlops-train
+  DAGSHUB_USER: ${{ vars.DAGSHUB_USER || github.repository_owner }}
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    outputs:
+      sha: ${{ steps.commit.outputs.sha }}
+    env:
+      KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}  # new KGAT_ token from kaggle.com/settings
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --frozen --all-groups
+
+      - name: Push Kaggle kernel
+        run: |
+          mkdir -p build
+          sed -e "s|__REPO__|${{ github.server_url }}/${{ github.repository }}.git|" \
+              -e "s|__SHA__|$GITHUB_SHA|" kaggle/train_kernel.py > build/train_kernel.py
+          sed "s|__USER__|$KAGGLE_USERNAME|" kaggle/kernel-metadata.json > build/kernel-metadata.json
+          uv run kaggle kernels push -p build
+
+      - name: Wait for Kaggle training
+        run: uv run python -m src.wait_kernel "$KAGGLE_USERNAME/$KERNEL_SLUG"
+
+      - name: Download outputs
+        run: |
+          uv run kaggle kernels output "$KAGGLE_USERNAME/$KERNEL_SLUG" -p kaggle_out
+          # refuse outputs from an older kernel version
+          test "$(cat kaggle_out/sha.txt)" = "$GITHUB_SHA" || { echo "Kaggle output is not from $GITHUB_SHA"; exit 1; }
+          for p in dvc.lock metrics.json models reports splits; do cp -r "kaggle_out/$p" .; done
+          cat metrics.json
+
+      - name: Version with DVC (DagsHub)
+        env:
+          DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+        run: |
+          uv run dvc remote modify --local origin auth basic
+          uv run dvc remote modify --local origin user "$DAGSHUB_USER"
+          uv run dvc remote modify --local origin password "$DAGSHUB_TOKEN"
+          uv run dvc commit -f
+          uv run dvc push
+
+      - name: Log to MLflow (DagsHub)
+        env:
+          MLFLOW_TRACKING_URI: https://dagshub.com/${{ env.DAGSHUB_USER }}/${{ github.event.repository.name }}.mlflow
+          MLFLOW_TRACKING_USERNAME: ${{ env.DAGSHUB_USER }}
+          MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }}
+          RUN_NAME: kaggle-${{ github.run_number }}
+        run: uv run python -m src.log_mlflow
+
+      - name: Commit dvc.lock and metrics
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dvc.lock metrics.json reports
+          git commit -m "ct: Kaggle training run ${{ github.run_number }}"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    # Pushes made with GITHUB_TOKEN don't trigger workflows, so call CD directly.
+    needs: train
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/cd.yml
+    with:
+      ref: ${{ needs.train.outputs.sha }}
+    secrets: inherit

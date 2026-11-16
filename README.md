@@ -76,3 +76,42 @@ Users can upload an MRI image and receive **instant, color-coded stage classific
 - Data Augmentation (rotation, shift, zoom)  
 - EarlyStopping & ModelCheckpoint  
 - Real-time deployment with **Streamlit** & **Hugging Face**
+
+---
+
+## **MLOps: CI / CT / CD**
+
+```
+params.yaml ─► prepare ─► train ─► evaluate        (dvc.yaml — `dvc repro`)
+                splits/   models/model.weights.h5   metrics.json
+```
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `ci.yml` | every PR / push to main | ruff, pytest, full `dvc` pipeline smoke run on `Data/SampleTestDataset` (1 epoch), MLflow log |
+| `train.yml` (CT) | manual, or push to main changing `params.yaml` / `dvc.yaml` / training code | runs `dvc repro` on a **Kaggle GPU** kernel, `dvc push` to DagsHub, logs the run to DagsHub MLflow, commits `dvc.lock` + `metrics.json`, then calls CD |
+| `cd.yml` (CD) | after CT, push changing `dvc.lock`, or manual | gate: test accuracy ≥ `evaluate.min_accuracy` → upload weights to the HF model repo (Streamlit Cloud redeploys the app from `main`) |
+
+### One-time setup
+1. **DagsHub:** create a repo connected to this GitHub repo (DVC remote + MLflow server). If your DagsHub
+   username isn't `eyad3anan`, edit the URL in `.dvc/config`.
+2. **Kaggle:** phone-verify the account (GPU + internet in kernels), create an API token (Settings → API).
+3. **GitHub → Settings → Secrets and variables → Actions:**
+   - secrets: `KAGGLE_USERNAME`, `KAGGLE_API_TOKEN` (the `KGAT_...` token), `DAGSHUB_TOKEN`, `HF_TOKEN` (write access)
+   - variables (optional): `DAGSHUB_USER`, `HF_MODEL_REPO`
+   - optional: add required reviewers to the `production` environment for a manual approval before deploy.
+4. **Streamlit Community Cloud** (free): share.streamlit.io → Create app → this repo, branch `main`,
+   file `app.py`, Advanced settings → Python **3.11**, Secrets → `HF_TOKEN = "hf_..."`. It redeploys on
+   every push to `main`.
+
+### Local commands
+```bash
+uv sync --all-groups             # runtime + train + dev deps
+uv run pytest                    # unit tests
+# smoke-run the whole pipeline on the sample images
+uv run dvc exp run -S data.raw_dir=Data/SampleTestDataset -S data.test_size=0.2 \
+  -S data.val_size=0.25 -S train.epochs=1 -S train.batch_size=4
+uv run python -m src.log_mlflow  # log the run (./mlflow.db unless MLFLOW_TRACKING_URI is set)
+uv run mlflow ui                 # browse runs
+```
+To retrain: change `params.yaml`, push to main (or run **Train (Kaggle GPU)** from the Actions tab).

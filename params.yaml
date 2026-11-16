@@ -1,0 +1,20 @@
+data:
+  # Kaggle dataset uraninjo/augmented-alzheimer-mri-dataset; override locally with
+  # `dvc exp run -S data.raw_dir=...`
+  raw_dir: /kaggle/input/augmented-alzheimer-mri-dataset/OriginalDataset
+  test_size: 0.1
+  val_size: 0.1
+  seed: 42
+
+train:
+  epochs: 20
+  batch_size: 32
+  learning_rate: 0.001
+  dropout: 0.45
+  dense_units: 256
+  patience: 10
+  weights: imagenet
+
+evaluate:
+  # CD only deploys a model whose test accuracy reaches this
+  min_accuracy: 0.95

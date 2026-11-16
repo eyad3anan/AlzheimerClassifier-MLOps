@@ -1,0 +1,56 @@
+name: Deploy (Hugging Face)
+
+# Continuous deployment: if the committed model passes the accuracy gate, ship the
+# weights to the HF model repo. Streamlit Community Cloud redeploys the app from main
+# by itself and downloads the new weights on start.
+on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: false
+        default: ""
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [dvc.lock]
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      HF_MODEL_REPO: ${{ vars.HF_MODEL_REPO || 'Eyaddddddd/AlzheimerClassifierTL' }}
+      DAGSHUB_USER: ${{ vars.DAGSHUB_USER || github.repository_owner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Accuracy gate
+        run: uv run --no-project --with pyyaml python -m src.gate
+
+      - name: Pull model from DVC (DagsHub)
+        env:
+          DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+        run: |
+          uvx --from "dvc>=3.50" dvc remote modify --local origin auth basic
+          uvx --from "dvc>=3.50" dvc remote modify --local origin user "$DAGSHUB_USER"
+          uvx --from "dvc>=3.50" dvc remote modify --local origin password "$DAGSHUB_TOKEN"
+          uvx --from "dvc>=3.50" dvc pull models/model.weights.h5
+
+      - name: Upload model to HF model repo
+        run: |
+          uvx --from huggingface_hub hf upload "$HF_MODEL_REPO" models/model.weights.h5 model.weights.h5
+          uvx --from huggingface_hub hf upload "$HF_MODEL_REPO" metrics.json metrics.json
+

@@ -117,40 +117,24 @@
 
 
 
-import streamlit as st
-import tensorflow as tf
+import os
+
 import numpy as np
-from PIL import Image
+import streamlit as st
 from huggingface_hub import hf_hub_download
+from PIL import Image
 
+from src.model import CLASSES, build_model, preprocess_image
 
-HF_TOKEN = st.secrets["HF_TOKEN"]
-
-
-def build_model():
-    # Same architecture as training; weights=None because we load our own trained weights
-    base = tf.keras.applications.ResNet50(
-        include_top=False,
-        weights=None,
-        input_shape=(224, 224, 3),
-        pooling="max",   # must match training (notebook cell 38)
-    )
-    model = tf.keras.Sequential([
-        tf.keras.Input(shape=(224, 224, 3)),
-        base,
-        tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.Dense(256, activation="relu"),
-        tf.keras.layers.Dropout(0.45),
-        tf.keras.layers.Dense(4, activation="softmax"),
-    ])
-    return model
+# env var (CI, containers) or .streamlit/secrets.toml / Streamlit Cloud secrets
+HF_TOKEN = os.environ.get("HF_TOKEN") or st.secrets["HF_TOKEN"]
 
 
 @st.cache_resource
 def load_model():
     model_path = hf_hub_download(
         repo_id="Eyaddddddd/AlzheimerClassifierTL",
-        filename="AlzheimerClassifierTL.h5",
+        filename="model.weights.h5",
         token=HF_TOKEN
     )
     model = build_model()
@@ -161,32 +145,12 @@ def load_model():
 model = load_model()
 
 
-class_mapping = {
-    "MildDemented": 0,
-    "ModerateDemented": 1,
-    "NonDemented": 2,
-    "VeryMildDemented": 3
-}
-idx_to_class = {v: k for k, v in class_mapping.items()}
-
-
 status_messages = {
     "NonDemented":  ("✅ Likely Healthy / No Dementia detected", "green"),
     "VeryMildDemented": ("🟡 Signs of Very Mild Dementia", "orange"),
     "MildDemented": ("🟠 Signs of Mild Dementia", "darkorange"),
     "ModerateDemented": ("🔴 Signs of Moderate Dementia", "darkred")
 }
-
-
-def preprocess_image(image):
-    IMG_SIZE = (224, 224)
-    image = image.convert("RGB")
-    # flow_from_dataframe resizes with "nearest" by default, so match it here
-    image = image.resize(IMG_SIZE, Image.NEAREST)
-    img_array = np.array(image, dtype=np.float32)
-    img_array = tf.keras.applications.resnet50.preprocess_input(img_array)
-    img_array = np.expand_dims(img_array, axis=0)
-    return img_array
 
 
 st.sidebar.title("Navigation")
@@ -244,7 +208,7 @@ elif page == "Detection":
         img_array = preprocess_image(image)
         prediction = model.predict(img_array, verbose=0)[0]
         predicted_idx = int(np.argmax(prediction))
-        predicted_class = idx_to_class[predicted_idx]
+        predicted_class = CLASSES[predicted_idx]
         probability = prediction[predicted_idx] * 100
 
         message, color = status_messages[predicted_class]

@@ -1,0 +1,13 @@
+{
+  "id": "__USER__/alzheimer-mlops-train",
+  "title": "alzheimer-mlops-train",
+  "code_file": "train_kernel.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": ["uraninjo/augmented-alzheimer-mri-dataset"],
+  "competition_sources": [],
+  "kernel_sources": []
+}
