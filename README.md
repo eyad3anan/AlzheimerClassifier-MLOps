@@ -100,8 +100,9 @@ params.yaml ─► prepare ─► train ─► evaluate        (dvc.yaml — `dv
    - secrets: `KAGGLE_USERNAME`, `KAGGLE_API_TOKEN` (the `KGAT_...` token), `DAGSHUB_TOKEN`, `HF_TOKEN` (write access)
    - variables: `HF_SPACE_ID` (e.g. `user/space`), optional `DAGSHUB_USER`, `HF_MODEL_REPO`
    - optional: add required reviewers to the `production` environment for a manual approval before deploy.
-4. The HF Space must have an `HF_TOKEN` secret to download the private model, and its README should set
-   `python_version: "3.11"`.
+4. Create the HF Space with SDK **Docker** (free CPU basic). CD uploads `deploy/space/Dockerfile` and
+   `deploy/space/README.md` with the app. Add an `HF_TOKEN` secret in the Space settings so the app can
+   download the private model.
 
 ### Local commands
 ```bash

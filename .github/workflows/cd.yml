@@ -58,7 +58,7 @@ jobs:
         if: env.HF_SPACE_ID != ''
         run: |
           mkdir -p space/src
-          cp app.py Alzheimer.png space/
+          cp deploy/space/Dockerfile deploy/space/README.md app.py Alzheimer.png space/
           cp src/__init__.py src/model.py space/src/
           uv export --frozen --no-default-groups --no-hashes --no-emit-project -o space/requirements.txt
           uvx --from huggingface_hub hf upload "$HF_SPACE_ID" space . --repo-type space \

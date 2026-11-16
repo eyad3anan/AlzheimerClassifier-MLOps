@@ -117,6 +117,8 @@
 
 
 
+import os
+
 import numpy as np
 import streamlit as st
 from huggingface_hub import hf_hub_download
@@ -124,7 +126,8 @@ from PIL import Image
 
 from src.model import CLASSES, build_model, preprocess_image
 
-HF_TOKEN = st.secrets["HF_TOKEN"]
+# Docker Spaces pass secrets as env vars; locally .streamlit/secrets.toml still works
+HF_TOKEN = os.environ.get("HF_TOKEN") or st.secrets["HF_TOKEN"]
 
 
 @st.cache_resource
