@@ -95,9 +95,9 @@ params.yaml ─► prepare ─► train ─► evaluate        (dvc.yaml — `dv
 ### One-time setup
 1. **DagsHub:** create a repo connected to this GitHub repo (DVC remote + MLflow server). If your DagsHub
    username isn't `eyad3anan`, edit the URL in `.dvc/config`.
-2. **Kaggle:** phone-verify the account (GPU + internet in kernels), create an API token.
+2. **Kaggle:** phone-verify the account (GPU + internet in kernels), create an API token (Settings → API).
 3. **GitHub → Settings → Secrets and variables → Actions:**
-   - secrets: `KAGGLE_USERNAME`, `KAGGLE_KEY`, `DAGSHUB_TOKEN`, `HF_TOKEN` (write access)
+   - secrets: `KAGGLE_USERNAME`, `KAGGLE_API_TOKEN` (the `KGAT_...` token), `DAGSHUB_TOKEN`, `HF_TOKEN` (write access)
    - variables: `HF_SPACE_ID` (e.g. `user/space`), optional `DAGSHUB_USER`, `HF_MODEL_REPO`
    - optional: add required reviewers to the `production` environment for a manual approval before deploy.
 4. The HF Space must have an `HF_TOKEN` secret to download the private model, and its README should set

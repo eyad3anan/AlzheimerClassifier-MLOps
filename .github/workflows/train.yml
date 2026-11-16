@@ -27,7 +27,7 @@ jobs:
       sha: ${{ steps.commit.outputs.sha }}
     env:
       KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
-      KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}  # new KGAT_ token from kaggle.com/settings
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
