@@ -126,7 +126,7 @@ from PIL import Image
 
 from src.model import CLASSES, build_model, preprocess_image
 
-# Docker Spaces pass secrets as env vars; locally .streamlit/secrets.toml still works
+# env var (CI, containers) or .streamlit/secrets.toml / Streamlit Cloud secrets
 HF_TOKEN = os.environ.get("HF_TOKEN") or st.secrets["HF_TOKEN"]
 
 

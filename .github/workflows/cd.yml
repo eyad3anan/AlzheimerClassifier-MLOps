@@ -1,7 +1,8 @@
 name: Deploy (Hugging Face)
 
 # Continuous deployment: if the committed model passes the accuracy gate, ship the
-# weights to the HF model repo and the app to the HF Space.
+# weights to the HF model repo. Streamlit Community Cloud redeploys the app from main
+# by itself and downloads the new weights on start.
 on:
   workflow_call:
     inputs:
@@ -29,7 +30,6 @@ jobs:
     env:
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
       HF_MODEL_REPO: ${{ vars.HF_MODEL_REPO || 'Eyaddddddd/AlzheimerClassifierTL' }}
-      HF_SPACE_ID: ${{ vars.HF_SPACE_ID }}
       DAGSHUB_USER: ${{ vars.DAGSHUB_USER || github.repository_owner }}
     steps:
       - uses: actions/checkout@v4
@@ -54,12 +54,3 @@ jobs:
           uvx --from huggingface_hub hf upload "$HF_MODEL_REPO" models/model.weights.h5 model.weights.h5
           uvx --from huggingface_hub hf upload "$HF_MODEL_REPO" metrics.json metrics.json
 
-      - name: Deploy app to HF Space
-        if: env.HF_SPACE_ID != ''
-        run: |
-          mkdir -p space/src
-          cp deploy/space/Dockerfile deploy/space/README.md app.py Alzheimer.png space/
-          cp src/__init__.py src/model.py space/src/
-          uv export --frozen --no-default-groups --no-hashes --no-emit-project -o space/requirements.txt
-          uvx --from huggingface_hub hf upload "$HF_SPACE_ID" space . --repo-type space \
-            --commit-message "cd: deploy ${{ inputs.ref || github.sha }}"
