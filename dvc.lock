@@ -1,0 +1,85 @@
+schema: '2.0'
+stages:
+  prepare:
+    cmd: python -m src.prepare
+    deps:
+    - path: src/prepare.py
+      hash: md5
+      md5: a2c7097f34e30621e409eecd4aa96e79
+      size: 1273
+    params:
+      params.yaml:
+        data:
+          raw_dir: 
+            /kaggle/input/datasets/uraninjo/augmented-alzheimer-mri-dataset/OriginalDataset
+          test_size: 0.1
+          val_size: 0.1
+          seed: 42
+    outs:
+    - path: splits
+      hash: md5
+      md5: 1cc125655670c3d990c438d8e7f6276d.dir
+      size: 789144
+      nfiles: 3
+  train:
+    cmd: python -m src.train
+    deps:
+    - path: splits
+      hash: md5
+      md5: 1cc125655670c3d990c438d8e7f6276d.dir
+      size: 789144
+      nfiles: 3
+    - path: src/model.py
+      hash: md5
+      md5: 5df075973cf1da5f5bcf1996a1fa8496
+      size: 1485
+    - path: src/train.py
+      hash: md5
+      md5: 3bdf7d81e7496ea6ec8849fd432f470f
+      size: 2750
+    params:
+      params.yaml:
+        train.batch_size: 32
+        train.dense_units: 256
+        train.dropout: 0.45
+        train.epochs: 20
+        train.learning_rate: 0.001
+        train.patience: 10
+        train.weights: imagenet
+    outs:
+    - path: models/model.weights.h5
+      hash: md5
+      md5: 22e659002466c7237a59a9304924b36c
+      size: 289656952
+    - path: reports/history.json
+      hash: md5
+      md5: e8bf392dd2a99bfc2768477501ed75c0
+      size: 1977
+  evaluate:
+    cmd: python -m src.evaluate
+    deps:
+    - path: models/model.weights.h5
+      hash: md5
+      md5: 22e659002466c7237a59a9304924b36c
+      size: 289656952
+    - path: splits/test.csv
+      hash: md5
+      md5: 81d98faf689f4f49927a3bc19ff5a6f9
+      size: 78929
+    - path: src/evaluate.py
+      hash: md5
+      md5: aee3865d103509c9b985bb3d3ebd74fa
+      size: 1439
+    - path: src/model.py
+      hash: md5
+      md5: 5df075973cf1da5f5bcf1996a1fa8496
+      size: 1485
+    outs:
+    - path: metrics.json
+      hash: md5
+      md5: 53ac9be4bd901d0a4d8147c2c45e7459
+      size: 122
+    - path: reports/confusion_matrix.json
+      hash: md5
+      md5: e5acc56967ac329c7412c7e7920642db
+      size: 322

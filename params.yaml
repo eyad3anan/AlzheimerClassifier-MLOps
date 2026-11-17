@@ -1,7 +1,7 @@
 data:
   # Kaggle dataset uraninjo/augmented-alzheimer-mri-dataset; override locally with
   # `dvc exp run -S data.raw_dir=...`
-  raw_dir: /kaggle/input/augmented-alzheimer-mri-dataset/OriginalDataset
+  raw_dir: /kaggle/input/datasets/uraninjo/augmented-alzheimer-mri-dataset/OriginalDataset
   test_size: 0.1
   val_size: 0.1
   seed: 42

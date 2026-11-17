@@ -1,0 +1,34 @@
+{
+  "labels": [
+    "MildDemented",
+    "ModerateDemented",
+    "NonDemented",
+    "VeryMildDemented"
+  ],
+  "matrix": [
+    [
+      80,
+      0,
+      2,
+      8
+    ],
+    [
+      0,
+      6,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      315,
+      5
+    ],
+    [
+      0,
+      0,
+      2,
+      222
+    ]
+  ]
+}
