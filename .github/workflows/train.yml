@@ -51,7 +51,7 @@ jobs:
           uv run kaggle kernels output "$KAGGLE_USERNAME/$KERNEL_SLUG" -p kaggle_out
           # refuse outputs from an older kernel version
           test "$(cat kaggle_out/sha.txt)" = "$GITHUB_SHA" || { echo "Kaggle output is not from $GITHUB_SHA"; exit 1; }
-          for p in dvc.lock metrics.json models reports splits; do cp -r "kaggle_out/$p" .; done
+          for p in params.yaml dvc.lock metrics.json models reports splits; do cp -r "kaggle_out/$p" .; done
           cat metrics.json
 
       - name: Version with DVC (DagsHub)
@@ -77,7 +77,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add dvc.lock metrics.json reports
+          git add params.yaml dvc.lock metrics.json reports  # params.yaml: real Kaggle dataset path
           git commit -m "ct: Kaggle training run ${{ github.run_number }}"
           git pull --rebase origin "$GITHUB_REF_NAME"
           git push origin "HEAD:$GITHUB_REF_NAME"
